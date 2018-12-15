@@ -4,7 +4,7 @@ import textwrap
 import subprocess
 
 from PIL import Image, ImageTk
-from tkinter import Tk, BOTH, Text, Button, END, filedialog, messagebox, NORMAL, DISABLED, Canvas, NW, PhotoImage
+from tkinter import Tk, BOTH, Text, Button, END, filedialog, messagebox, NORMAL, DISABLED, Canvas, Message
 from tkinter.ttk import Frame, Label, Style
 
 KB_PATH = r'D:\Python\CrazyMolingas\source.txt'
@@ -104,7 +104,6 @@ class Blocks:
         self.blocks = self._create_blocks()
         self.assert_molings_have_valid_last_character()
         self.assert_identifier_cores_length()
-        messagebox.showinfo('Info', message='Knowledge base loaded.')
 
     def __iter__(self):
         return iter(self.blocks)
@@ -244,16 +243,18 @@ class Example(Frame):
         self.displayed_text = Text(height=23, width=108)
         self.displayed_text.place(x=568, y=0)
         self.displayed_text.config(state=DISABLED)
-        button_forward = Button(self, height=1, width=12, text='Forward', command=self.show_next_block)
-        button_forward.place(x=570, y=540)
+        button_forward = Button(self, height=1, width=12, text='Forward', command=lambda: self.show_next_block(''))
+        self.focus_set()
+        self.bind('<Right>', self.show_next_block)
+        button_forward.place(x=1520, y=490)
         load_kb_button = Button(self, height=1, width=12, text='Load base', command=self.load_kb)
-        load_kb_button.place(x=695, y=540)
+        load_kb_button.place(x=600, y=490)
         load_images_button = Button(self, height=1, width=12, text='Load images', command=self.load_images)
-        load_images_button.place(x=820, y=540)
+        load_images_button.place(x=600, y=540)
         load_formulas_button = Button(self, height=1, width=12, text='Load forms', command=self.load_formulas)
-        load_formulas_button.place(x=945, y=540)
+        load_formulas_button.place(x=600, y=590)
 
-    def show_next_block(self):
+    def show_next_block(self, event):
         try:
             block = self.blocks.rotate_left()
         except AttributeError:
@@ -269,10 +270,12 @@ class Example(Frame):
                 if block.image():
                     pst = self.image_handler.find_condition(block.image())
                     image = Image.open(pst.path)
+                    width, height = image.size
+                    if width > 600 or height > 1650:
+                        image = image.resize((500, 500), Image.ANTIALIAS)
                     image = ImageTk.PhotoImage(image)
                     self.canvas.image = image
                     self.canvas.create_image(0, 0, anchor='nw', image=image)
-
                     if block.formula():
                         pst = self.formulas_handler.find_condition(block.formula())
                         subprocess.Popen([str(pst.path)])
@@ -282,14 +285,20 @@ class Example(Frame):
         if kb_path:
             kb = load_knowledge_base(kb_path.name)
             self.blocks = Blocks(kb)
+            label = Label(self, text=kb_path.name, background='#333', foreground='#fff')
+            label.place(x=718, y=493)
 
     def load_images(self):
         image_directory = filedialog.askdirectory()
         self.image_handler = PostconditionHandler(image_directory)
+        label = Label(self, text=image_directory, background='#333', foreground='#fff')
+        label.place(x=718, y=543)
 
     def load_formulas(self):
         formulas_directory = filedialog.askdirectory()
         self.formulas_handler = PostconditionHandler(formulas_directory)
+        label = Label(self, text=formulas_directory, background='#333', foreground='#fff')
+        label.place(x=718, y=593)
 
 
 def main():
