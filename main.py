@@ -1,30 +1,32 @@
 import collections
 import os, pathlib
 import textwrap
+import subprocess
 
 from PIL import Image, ImageTk
-from tkinter import Tk, BOTH, Text, DISABLED, Button, END, Scrollbar, Y, RIGHT
+from tkinter import Tk, BOTH, Text, Button, END, filedialog, messagebox
 from tkinter.ttk import Frame, Label, Style
 
-KB_PATH = r'D:\Python\MolingViewer\source.txt'
-IMAGES_PATH = r'D:\Python\MolingViewer\images'
-PostConditionImage = collections.namedtuple('PostConditionImage', ['path', 'name'])
+KB_PATH = r'D:\Python\CrazyMolingas\source.txt'
+IMAGES_PATH = r'D:\Python\CrazyMolingas\images'
+FORMULAS_PATH = r'D:\Python\CrazyMolingas\formulas'
+PostCondition = collections.namedtuple('PostConditionImage', ['path', 'name'])
 
 
-class ImagesHandler:
+class PostconditionHandler:
 
     def __init__(self, path):
         self.path = path
 
-    def gathered_images(self):
+    def gathered_conditions(self):
         with os.scandir(self.path) as directory:
             for child in directory:
                 path = pathlib.Path(child.path)
-                yield PostConditionImage(path, path.stem)
+                yield PostCondition(path, path.stem)
 
-    def find_image(self, filename):
-        image = [image for image in self.gathered_images() if image.name == filename]
-        return image[0]
+    def find_condition(self, filename):
+        condition = [cond for cond in self.gathered_conditions() if cond.name == filename]
+        return condition[0]
 
 
 class Moling:
@@ -116,6 +118,7 @@ class Blocks:
                 if text_molings:
                     blocks.append(text_molings)
                     text_molings = []
+                #  Check if moling with same identifier already collected (рис, форм) -> add second postcondition.
                 blocks.append([moling])
             else:
                 text_molings.append(moling)
@@ -171,10 +174,13 @@ class TextBlock:
 
     def _join_molings(self):
         formatted_molings = []
-        for moling in self.molings:
+        for index, moling in enumerate(self.molings):
             text = moling.core
             if moling.is_first():
                 formatted_molings.append(textwrap.indent('\n{}'.format(text), '    '))
+            elif moling.is_first() and self.molings.index(moling) != 0:
+                if moling.identifier == self.molings[index-1:0].identifier:
+                    formatted_molings.append(text)
             else:
                 formatted_molings.append(text)
         return ' '.join(formatted_molings)
@@ -206,10 +212,7 @@ class Example(Frame):
 
     def __init__(self):
         super().__init__()
-
-        self.image_handler = ImagesHandler(IMAGES_PATH)
-        kb = load_knowledge_base(KB_PATH)
-        self.blocks = Blocks(kb)
+        self.blocks, self.image_handler, self.formulas_handler = (None, None, None)
         self.init_ui()
 
     def init_ui(self):
@@ -222,21 +225,48 @@ class Example(Frame):
         self.image_label.place(x=0, y=0)
         self.displayed_text = Text(height=25, width=105)
         self.displayed_text.place(x=568, y=7)
-        button_forward = Button(self, height=1, width=6, text='Forward', command=self.test)
-        button_forward.place(x=600, y=550)
+        button_forward = Button(self, height=1, width=12, text='Forward', command=self.show_next_block)
+        button_forward.place(x=570, y=540)
+        load_kb_button = Button(self, height=1, width=12, text='Load KB', command=self.load_kb)
+        load_kb_button.place(x=695, y=540)
+        load_images_button = Button(self, height=1, width=12, text='Load images', command=self.load_images)
+        load_images_button.place(x=820, y=540)
+        load_formulas_button = Button(self, height=1, width=12, text='Load formulas', command=self.load_formulas)
+        load_formulas_button.place(x=945, y=540)
 
-    def test(self):
-        block = self.blocks.rotate_left()
-        if isinstance(block, TextBlock):
-            self.image_label.config(image='')
-        elif block.is_contains_image():
-            pst = self.image_handler.find_image(block.postcondition)
-            image = Image.open(pst.path)
-            image = ImageTk.PhotoImage(image)
-            self.image_label.configure(image=image)
-            self.image_label.image = image
-        self.displayed_text.insert(END, block)
-        self.displayed_text.see(END)
+    def show_next_block(self):
+        try:
+            block = self.blocks.rotate_left()
+        except AttributeError:
+            messagebox.showerror('Not so fast.', message='Load knowledge base first.')
+        else:
+            if isinstance(block, TextBlock):
+                self.image_label.config(image='')
+            elif block.is_contains_image():
+                pst = self.image_handler.find_condition(block.postcondition)
+                image = Image.open(pst.path)
+                image = ImageTk.PhotoImage(image)
+                self.image_label.configure(image=image)
+                self.image_label.image = image
+            elif block.is_contains_formula():
+                pst = self.formulas_handler.find_condition(block.postcondition)
+                subprocess.call(str(pst.path))
+            self.displayed_text.insert(END, block)
+            self.displayed_text.see(END)
+
+    def load_kb(self):
+        kb_path = filedialog.askopenfile()
+        if kb_path:
+            kb = load_knowledge_base(kb_path.name)
+            self.blocks = Blocks(kb)
+
+    def load_images(self):
+        image_directory = filedialog.askdirectory()
+        self.image_handler = PostconditionHandler(image_directory)
+
+    def load_formulas(self):
+        formulas_directory = filedialog.askdirectory()
+        self.formulas_handler = PostconditionHandler(formulas_directory)
 
 
 def main():
