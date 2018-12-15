@@ -4,7 +4,7 @@ import textwrap
 import subprocess
 
 from PIL import Image, ImageTk
-from tkinter import Tk, BOTH, Text, Button, END, filedialog, messagebox, NORMAL, DISABLED
+from tkinter import Tk, BOTH, Text, Button, END, filedialog, messagebox, NORMAL, DISABLED, Canvas, NW, PhotoImage
 from tkinter.ttk import Frame, Label, Style
 
 KB_PATH = r'D:\Python\CrazyMolingas\source.txt'
@@ -195,7 +195,6 @@ class TextBlock:
             if moling.is_first() and not self.is_same_sentence(index, moling):
                 formatted_molings.append(textwrap.indent('\n{}'.format(text), '    '))
             elif moling.is_first() and self.is_same_sentence(index, moling):
-                print(text)
                 if moling.identifier == self.molings[index-1:index][0].identifier:
                     formatted_molings.append(text)
             else:
@@ -238,10 +237,12 @@ class Example(Frame):
 
         Style().configure('TFrame', background='#333')
 
-        self.image_label = Label(self)
-        self.image_label.place(x=0, y=0)
-        self.displayed_text = Text(height=25, width=105)
-        self.displayed_text.place(x=568, y=7)
+        im = Image.open(r'C:\Users\ася\Desktop\Бронфельд\БЗ\изображения\форм 6.13.3.4.14.7.png')
+        photo = ImageTk.PhotoImage(im)
+        self.canvas = Canvas(self, height=1650, width=566, bg='#333')
+        self.canvas.place(x=0, y=0)
+        self.displayed_text = Text(height=23, width=108)
+        self.displayed_text.place(x=568, y=0)
         self.displayed_text.config(state=DISABLED)
         button_forward = Button(self, height=1, width=12, text='Forward', command=self.show_next_block)
         button_forward.place(x=570, y=540)
@@ -263,14 +264,14 @@ class Example(Frame):
             self.displayed_text.see(END)
             self.displayed_text.config(state=DISABLED)
             if isinstance(block, TextBlock):
-                self.image_label.config(image='')
+                self.canvas.delete("all")
             else:
                 if block.image():
                     pst = self.image_handler.find_condition(block.image())
                     image = Image.open(pst.path)
                     image = ImageTk.PhotoImage(image)
-                    self.image_label.configure(image=image)
-                    self.image_label.image = image
+                    self.canvas.image = image
+                    self.canvas.create_image(0, 0, anchor='nw', image=image)
 
                     if block.formula():
                         pst = self.formulas_handler.find_condition(block.formula())
