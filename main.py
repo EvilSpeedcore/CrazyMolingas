@@ -4,7 +4,7 @@ import textwrap
 import subprocess
 
 from PIL import Image, ImageTk
-from tkinter import Tk, BOTH, Text, Button, END, filedialog, messagebox
+from tkinter import Tk, BOTH, Text, Button, END, filedialog, messagebox, NORMAL, DISABLED
 from tkinter.ttk import Frame, Label, Style
 
 KB_PATH = r'D:\Python\CrazyMolingas\source.txt'
@@ -34,6 +34,7 @@ class Moling:
     def __init__(self, line):
         self.parts = [part.strip() for part in line.split(';')]
         self.identifier_codes = self._get_identifier_cores()
+        self.postconditions = [self.postcondition]
 
     @property
     def identifier(self):
@@ -45,10 +46,7 @@ class Moling:
 
     @property
     def core(self):
-        c = self.parts[2]
-        if c[-1] not in ('.', '...', '?', '!'):
-            raise Exception('No period in the end of sentence in "{}"'.format(c))
-        return c
+        return self.parts[2]
 
     @property
     def dict_numbers(self):
@@ -87,10 +85,7 @@ class Moling:
 
     def _get_identifier_cores(self):
         ids = self.identifier.split('.')
-        if len(ids) != 6:
-            raise Exception('Invalid identifier: {}'.format(self))
-        else:
-            return ids
+        return ids
 
     def __repr__(self):
         r = 'Moling({},{},{},{},{},{})'
@@ -107,6 +102,9 @@ class Blocks:
     def __init__(self, knowledge_base):
         self.molings = [Moling(entry) for entry in knowledge_base]
         self.blocks = self._create_blocks()
+        self.assert_molings_have_valid_last_character()
+        self.assert_identifier_cores_length()
+        messagebox.showinfo('Info', message='Knowledge base loaded.')
 
     def __iter__(self):
         return iter(self.blocks)
@@ -118,17 +116,21 @@ class Blocks:
                 if text_molings:
                     blocks.append(text_molings)
                     text_molings = []
-                #  Check if moling with same identifier already collected (рис, форм) -> add second postcondition.
-                blocks.append([moling])
+                duplicate = [e for e in blocks if not isinstance(e, list)
+                             and e.identifier == moling.identifier]
+                if duplicate:
+                    duplicate[0].postconditions.append(moling.postcondition)
+                else:
+                    blocks.append(moling)
             else:
                 text_molings.append(moling)
 
         d = collections.deque()
         for block in blocks:
-            if len(block) == 1:
-                d.append(PostconditionBlock(block[0]))
-            else:
+            if isinstance(block, list):
                 d.append(TextBlock(block))
+            else:
+                d.append(PostconditionBlock(block))
         return d
 
     def rotate_right(self):
@@ -141,12 +143,23 @@ class Blocks:
         self.blocks.rotate(-1)
         return row
 
+    def assert_molings_have_valid_last_character(self):
+        for moling in self.molings:
+            if not moling.core.endswith(('.', '...', '!', '?')):
+                messagebox.showerror('Error', message='Invalid end of core: {}'.format(moling.core))
+
+    def assert_identifier_cores_length(self):
+        for moling in self.molings:
+            ids = moling.identifier.split('.')
+            if len(ids) != 6:
+                messagebox.showerror('Error', message='Invalid identifier length: {}'.format(moling.identifier))
+
 
 class PostconditionBlock:
 
     def __init__(self, moling):
         self.moling = moling
-        self.postcondition = self.moling.postcondition
+        self.postconditions = self.moling.postconditions
 
     def __repr__(self):
         return self.text
@@ -157,11 +170,11 @@ class PostconditionBlock:
             return textwrap.indent('\n{}'.format(self.moling.core), '    ')
         return textwrap.indent(self.moling.core, ' ')
 
-    def is_contains_image(self):
-        return 'рис' in self.moling.postcondition
+    def image(self):
+        return [pst for pst in self.postconditions if 'рис' in pst][0]
 
-    def is_contains_formula(self):
-        return 'форм' in self.moling.postcondition
+    def formula(self):
+        return [pst for pst in self.postconditions if 'форм' in pst][0]
 
 
 class TextBlock:
@@ -172,14 +185,18 @@ class TextBlock:
     def __repr__(self):
         return self.text
 
+    def is_same_sentence(self, index, moling):
+        return [each for each in self.molings[:index] if each.identifier == moling.identifier]
+
     def _join_molings(self):
         formatted_molings = []
         for index, moling in enumerate(self.molings):
             text = moling.core
-            if moling.is_first():
+            if moling.is_first() and not self.is_same_sentence(index, moling):
                 formatted_molings.append(textwrap.indent('\n{}'.format(text), '    '))
-            elif moling.is_first() and self.molings.index(moling) != 0:
-                if moling.identifier == self.molings[index-1:0].identifier:
+            elif moling.is_first() and self.is_same_sentence(index, moling):
+                print(text)
+                if moling.identifier == self.molings[index-1:index][0].identifier:
                     formatted_molings.append(text)
             else:
                 formatted_molings.append(text)
@@ -225,13 +242,14 @@ class Example(Frame):
         self.image_label.place(x=0, y=0)
         self.displayed_text = Text(height=25, width=105)
         self.displayed_text.place(x=568, y=7)
+        self.displayed_text.config(state=DISABLED)
         button_forward = Button(self, height=1, width=12, text='Forward', command=self.show_next_block)
         button_forward.place(x=570, y=540)
-        load_kb_button = Button(self, height=1, width=12, text='Load KB', command=self.load_kb)
+        load_kb_button = Button(self, height=1, width=12, text='Load base', command=self.load_kb)
         load_kb_button.place(x=695, y=540)
         load_images_button = Button(self, height=1, width=12, text='Load images', command=self.load_images)
         load_images_button.place(x=820, y=540)
-        load_formulas_button = Button(self, height=1, width=12, text='Load formulas', command=self.load_formulas)
+        load_formulas_button = Button(self, height=1, width=12, text='Load forms', command=self.load_formulas)
         load_formulas_button.place(x=945, y=540)
 
     def show_next_block(self):
@@ -240,19 +258,23 @@ class Example(Frame):
         except AttributeError:
             messagebox.showerror('Not so fast.', message='Load knowledge base first.')
         else:
-            if isinstance(block, TextBlock):
-                self.image_label.config(image='')
-            elif block.is_contains_image():
-                pst = self.image_handler.find_condition(block.postcondition)
-                image = Image.open(pst.path)
-                image = ImageTk.PhotoImage(image)
-                self.image_label.configure(image=image)
-                self.image_label.image = image
-            elif block.is_contains_formula():
-                pst = self.formulas_handler.find_condition(block.postcondition)
-                subprocess.call(str(pst.path))
+            self.displayed_text.config(state=NORMAL)
             self.displayed_text.insert(END, block)
             self.displayed_text.see(END)
+            self.displayed_text.config(state=DISABLED)
+            if isinstance(block, TextBlock):
+                self.image_label.config(image='')
+            else:
+                if block.image():
+                    pst = self.image_handler.find_condition(block.image())
+                    image = Image.open(pst.path)
+                    image = ImageTk.PhotoImage(image)
+                    self.image_label.configure(image=image)
+                    self.image_label.image = image
+
+                    if block.formula():
+                        pst = self.formulas_handler.find_condition(block.formula())
+                        subprocess.Popen([str(pst.path)])
 
     def load_kb(self):
         kb_path = filedialog.askopenfile()
