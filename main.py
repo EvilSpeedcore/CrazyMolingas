@@ -7,7 +7,8 @@ import subprocess
 
 from PIL import Image, ImageTk
 from tkinter import (
-    Tk, BOTH, Text, Button, END, filedialog, messagebox, NORMAL, DISABLED, Canvas, Checkbutton, IntVar
+    Tk, BOTH, Text, Button, END, filedialog, messagebox, NORMAL, DISABLED,
+    Canvas, Checkbutton, IntVar, S, W, E, N
 )
 from tkinter.ttk import Frame, Label, Style
 
@@ -231,7 +232,7 @@ def load_knowledge_base(filepath):
     return lines
 
 
-class Example(Frame):
+class MolingViewer(Frame):
 
     def __init__(self):
         super().__init__()
@@ -240,28 +241,32 @@ class Example(Frame):
 
     def init_ui(self):
         self.master.title('MolingViewer')
+        Style().configure('TFrame', background='#333')
         self.pack(fill=BOTH, expand=1)
 
-        Style().configure('TFrame', background='#333')
+        image = Image.open(r'C:\Users\ася\Desktop\6.jpg')
+        image = ImageTk.PhotoImage(image)
+        self.canvas = Canvas(self, height=696, width=550, highlightthickness=1, highlightbackground='black')
+        self.canvas.grid(row=0, column=1, rowspan=10, columnspan=4, sticky=N+W)
+        self.canvas.image = image
+        self.canvas.create_image(0, 0, anchor='nw', image=image)
 
-        self.canvas = Canvas(self, height=1650, width=566, bg='#333')
-        self.canvas.place(x=0, y=0)
-        self.displayed_text = Text(height=23, width=108)
-        self.displayed_text.place(x=568, y=0)
-        self.displayed_text.config(state=DISABLED)
-        button_forward = Button(self, height=1, width=12, text='Forward', command=lambda: self.show_next_block(''))
-        self.focus_set()
-        self.bind('<Right>', self.show_next_block)
-        button_forward.place(x=1520, y=490)
-        load_kb_button = Button(self, height=1, width=12, text='Load base', command=self.load_kb)
-        load_kb_button.place(x=600, y=490)
-        load_images_button = Button(self, height=1, width=12, text='Load images', command=self.load_images)
-        load_images_button.place(x=600, y=540)
-        load_formulas_button = Button(self, height=1, width=12, text='Load forms', command=self.load_formulas)
-        load_formulas_button.place(x=600, y=590)
+        self.displayed_text = Text(self, width=109, highlightthickness=1, highlightbackground='black', padx=1)
+        self.displayed_text.grid(row=0, column=5, rowspan=6, columnspan=7, sticky=N+W)
+
+        b = Button(self, text='Load base', height=1, width=12, command=self.load_kb)
+        b.grid(row=6, column=5, sticky=S+W, padx=50)
+        b = Button(self, text='Load images', height=1, width=12, command=self.load_images)
+        b.grid(row=7, column=5, sticky=S+W, padx=50)
+        b = Button(self, text='Load forms', height=1, width=12, command=self.load_formulas)
+        b.grid(row=8, column=5, sticky=S+W, padx=50)
+
+        b = Button(self, height=1, width=12, text='Forward', command=lambda: self.show_next_block(''))
+        b.grid(row=6, column=11, sticky=S+E, padx=50)
+
         self.var = IntVar()
-        safe_checkbox = Checkbutton(self, text='TEXT ONLY', variable=self.var, height=1, width=10)
-        safe_checkbox.place(x=1520, y=540)
+        c = Checkbutton(self, text='TEXT ONLY', variable=self.var, height=1, width=10)
+        c.grid(row=7, column=11, sticky=S+E, padx=50)
 
     def show_next_block(self, event):
         try:
@@ -295,26 +300,20 @@ class Example(Frame):
         if kb_path:
             kb = load_knowledge_base(kb_path.name)
             self.blocks = Blocks(kb)
-            label = Label(self, text=kb_path.name, background='#333', foreground='#fff')
-            label.place(x=718, y=493)
 
     def load_images(self):
         image_directory = filedialog.askdirectory()
         self.image_handler = PostconditionHandler(image_directory)
-        label = Label(self, text=image_directory, background='#333', foreground='#fff')
-        label.place(x=718, y=543)
 
     def load_formulas(self):
         formulas_directory = filedialog.askdirectory()
         self.formulas_handler = PostconditionHandler(formulas_directory)
-        label = Label(self, text=formulas_directory, background='#333', foreground='#fff')
-        label.place(x=718, y=593)
 
 
 def main():
     root = Tk()
     root.geometry("1650x700")
-    app = Example()
+    app = MolingViewer()
     root.mainloop()
 
 
