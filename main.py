@@ -1,7 +1,8 @@
 #  TODO: File should be in UTF-8 without BOM.
 #  TODO: There is should be no blank lines in file.
 import collections
-import os, pathlib
+import os
+import pathlib
 import textwrap
 import subprocess
 
@@ -11,6 +12,7 @@ from tkinter import (
     Canvas, Checkbutton, IntVar, S, W, E, N
 )
 from tkinter.ttk import Frame, Label, Style
+
 
 KB_PATH = r'D:\Python\CrazyMolingas\source.txt'
 IMAGES_PATH = r'D:\Python\CrazyMolingas\images'
@@ -63,7 +65,6 @@ class Moling:
 
     @property
     def postcondition(self):
-        print(self.parts)
         return self.parts[5]
 
     @property
@@ -244,12 +245,8 @@ class MolingViewer(Frame):
         Style().configure('TFrame', background='#333')
         self.pack(fill=BOTH, expand=1)
 
-        image = Image.open(r'C:\Users\ася\Desktop\6.jpg')
-        image = ImageTk.PhotoImage(image)
         self.canvas = Canvas(self, height=696, width=550, highlightthickness=1, highlightbackground='black')
         self.canvas.grid(row=0, column=1, rowspan=10, columnspan=4, sticky=N+W)
-        self.canvas.image = image
-        self.canvas.create_image(0, 0, anchor='nw', image=image)
 
         self.displayed_text = Text(self, width=109, highlightthickness=1, highlightbackground='black', padx=1)
         self.displayed_text.grid(row=0, column=5, rowspan=6, columnspan=7, sticky=N+W)
