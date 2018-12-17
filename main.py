@@ -1,10 +1,14 @@
+#  TODO: File should be in UTF-8 without BOM.
+#  TODO: There is should be no blank lines in file.
 import collections
 import os, pathlib
 import textwrap
 import subprocess
 
 from PIL import Image, ImageTk
-from tkinter import Tk, BOTH, Text, Button, END, filedialog, messagebox, NORMAL, DISABLED, Canvas, Message
+from tkinter import (
+    Tk, BOTH, Text, Button, END, filedialog, messagebox, NORMAL, DISABLED, Canvas, Checkbutton, IntVar
+)
 from tkinter.ttk import Frame, Label, Style
 
 KB_PATH = r'D:\Python\CrazyMolingas\source.txt'
@@ -58,6 +62,7 @@ class Moling:
 
     @property
     def postcondition(self):
+        print(self.parts)
         return self.parts[5]
 
     @property
@@ -123,6 +128,9 @@ class Blocks:
                     blocks.append(moling)
             else:
                 text_molings.append(moling)
+
+        if not blocks:
+            blocks.append(text_molings)
 
         d = collections.deque()
         for block in blocks:
@@ -236,8 +244,6 @@ class Example(Frame):
 
         Style().configure('TFrame', background='#333')
 
-        im = Image.open(r'C:\Users\ася\Desktop\Бронфельд\БЗ\изображения\форм 6.13.3.4.14.7.png')
-        photo = ImageTk.PhotoImage(im)
         self.canvas = Canvas(self, height=1650, width=566, bg='#333')
         self.canvas.place(x=0, y=0)
         self.displayed_text = Text(height=23, width=108)
@@ -253,6 +259,9 @@ class Example(Frame):
         load_images_button.place(x=600, y=540)
         load_formulas_button = Button(self, height=1, width=12, text='Load forms', command=self.load_formulas)
         load_formulas_button.place(x=600, y=590)
+        self.var = IntVar()
+        safe_checkbox = Checkbutton(self, text='TEXT ONLY', variable=self.var, height=1, width=10)
+        safe_checkbox.place(x=1520, y=540)
 
     def show_next_block(self, event):
         try:
@@ -267,18 +276,19 @@ class Example(Frame):
             if isinstance(block, TextBlock):
                 self.canvas.delete("all")
             else:
-                if block.image():
-                    pst = self.image_handler.find_condition(block.image())
-                    image = Image.open(pst.path)
-                    width, height = image.size
-                    if width > 600 or height > 1650:
-                        image = image.resize((500, 500), Image.ANTIALIAS)
-                    image = ImageTk.PhotoImage(image)
-                    self.canvas.image = image
-                    self.canvas.create_image(0, 0, anchor='nw', image=image)
-                    if block.formula():
-                        pst = self.formulas_handler.find_condition(block.formula())
-                        subprocess.Popen([str(pst.path)])
+                if not self.var.get():
+                    if block.image():
+                        pst = self.image_handler.find_condition(block.image())
+                        image = Image.open(pst.path)
+                        width, height = image.size
+                        if width > 600 or height > 1650:
+                            image = image.resize((500, 500), Image.ANTIALIAS)
+                        image = ImageTk.PhotoImage(image)
+                        self.canvas.image = image
+                        self.canvas.create_image(0, 0, anchor='nw', image=image)
+                        if block.formula():
+                            pst = self.formulas_handler.find_condition(block.formula())
+                            subprocess.Popen([str(pst.path)])
 
     def load_kb(self):
         kb_path = filedialog.askopenfile()
