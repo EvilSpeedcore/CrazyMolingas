@@ -14,9 +14,6 @@ from tkinter import (
 from tkinter.ttk import Frame, Label, Style
 
 
-KB_PATH = r'D:\Python\CrazyMolingas\source.txt'
-IMAGES_PATH = r'D:\Python\CrazyMolingas\images'
-FORMULAS_PATH = r'D:\Python\CrazyMolingas\formulas'
 PostCondition = collections.namedtuple('PostConditionImage', ['path', 'name'])
 
 
@@ -28,8 +25,8 @@ class PostconditionHandler:
     def gathered_conditions(self):
         with os.scandir(self.path) as directory:
             for child in directory:
-                path = pathlib.Path(child.path)
-                yield PostCondition(path, path.stem)
+                for postcondition in os.listdir(child.path):
+                    yield pathlib.Path(postcondition).resolve()
 
     def find_condition(self, filename):
         condition = [cond for cond in self.gathered_conditions() if cond.name == filename]
@@ -185,6 +182,9 @@ class PostconditionBlock:
     def formula(self):
         return [pst for pst in self.postconditions if 'форм' in pst][0]
 
+    def table(self):
+        return [pst for pst in self.postconditions if 'табл' in pst][0]
+
 
 class TextBlock:
 
@@ -229,7 +229,7 @@ class TextBlock:
 
 def load_knowledge_base(filepath):
     with open(filepath, 'r', encoding='utf-8') as f:
-        lines = [line.strip() for line in f.readlines()]
+        lines = [line.strip() for line in f.readlines() if line]
     return lines
 
 
@@ -237,7 +237,7 @@ class MolingViewer(Frame):
 
     def __init__(self):
         super().__init__()
-        self.blocks, self.image_handler, self.formulas_handler = (None, None, None)
+        self.blocks, self.postcondition_handler = (None, None)
         self.init_ui()
 
     def init_ui(self):
@@ -251,19 +251,21 @@ class MolingViewer(Frame):
         self.displayed_text = Text(self, width=109, highlightthickness=1, highlightbackground='black', padx=1)
         self.displayed_text.grid(row=0, column=5, rowspan=6, columnspan=7, sticky=N+W)
 
-        b = Button(self, text='Load base', height=1, width=12, command=self.load_kb)
-        b.grid(row=6, column=5, sticky=S+W, padx=50)
-        b = Button(self, text='Load images', height=1, width=12, command=self.load_images)
-        b.grid(row=7, column=5, sticky=S+W, padx=50)
-        b = Button(self, text='Load forms', height=1, width=12, command=self.load_formulas)
-        b.grid(row=8, column=5, sticky=S+W, padx=50)
+        load_base_button = Button(self, text='Load base', height=1, width=12, command=self.load_kb)
+        load_base_button.grid(row=6, column=11, sticky=W)
+        load_res_button = Button(self, text='Load resources', height=1, width=12, command=self.load_postconditions)
+        load_res_button.grid(row=7, column=11, sticky=N+W)
 
-        b = Button(self, height=1, width=12, text='Forward', command=lambda: self.show_next_block(''))
-        b.grid(row=6, column=11, sticky=S+E, padx=50)
+        self.show_table_button = Button(self, text='Show table', height=1, width=12, command='')
+        self.show_table_button.grid(row=8, column=11, sticky=N+W)
+        self.show_table_button['state'] = 'disabled'
+
+        forward_button = Button(self, height=1, width=12, text='Forward', command=lambda: self.show_next_block(''))
+        forward_button.grid(row=6, column=6, sticky=W)
 
         self.var = IntVar()
-        c = Checkbutton(self, text='TEXT ONLY', variable=self.var, height=1, width=10)
-        c.grid(row=7, column=11, sticky=S+E, padx=50)
+        text_only_checkbox = Checkbutton(self, text='TEXT ONLY', variable=self.var, height=1, width=10)
+        text_only_checkbox.grid(row=7, column=6, sticky=N+W)
 
     def show_next_block(self, event):
         try:
@@ -280,7 +282,7 @@ class MolingViewer(Frame):
             else:
                 if not self.var.get():
                     if block.image():
-                        pst = self.image_handler.find_condition(block.image())
+                        pst = self.postcondition_handler.find_condition(block.image())
                         image = Image.open(pst.path)
                         width, height = image.size
                         if width > 600 or height > 1650:
@@ -289,8 +291,10 @@ class MolingViewer(Frame):
                         self.canvas.image = image
                         self.canvas.create_image(0, 0, anchor='nw', image=image)
                         if block.formula():
-                            pst = self.formulas_handler.find_condition(block.formula())
+                            pst = self.postcondition_handler.find_condition(block.formula())
                             subprocess.Popen([str(pst.path)])
+                    elif block.table():
+                        self.show_table_button['state'] = 'normal'
 
     def load_kb(self):
         kb_path = filedialog.askopenfile()
@@ -298,13 +302,9 @@ class MolingViewer(Frame):
             kb = load_knowledge_base(kb_path.name)
             self.blocks = Blocks(kb)
 
-    def load_images(self):
-        image_directory = filedialog.askdirectory()
-        self.image_handler = PostconditionHandler(image_directory)
-
-    def load_formulas(self):
-        formulas_directory = filedialog.askdirectory()
-        self.formulas_handler = PostconditionHandler(formulas_directory)
+    def load_postconditions(self):
+        directory = filedialog.askdirectory()
+        self.postcondition_handler = PostconditionHandler(directory)
 
 
 def main():
