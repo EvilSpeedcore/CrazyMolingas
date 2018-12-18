@@ -33,8 +33,11 @@ class PostconditionHandler:
                         yield PostCondition(path, path.stem)
 
     def find_condition(self, filename):
-        condition = [cond for cond in self.gathered_conditions() if cond.name == filename]
-        return condition[0]
+        try:
+            condition = [cond for cond in self.gathered_conditions() if cond.name == filename]
+            return condition[0]
+        except IndexError:
+            messagebox.showerror('Lost and never found.', message='Cannon find postcondition: "{}"'.format(filename))
 
 
 class Moling:
