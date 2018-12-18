@@ -130,7 +130,7 @@ class Blocks:
                     blocks.append(moling)
             else:
                 text_molings.append(moling)
-
+        blocks.append(text_molings)
         if not blocks:
             blocks.append(text_molings)
 
@@ -142,14 +142,8 @@ class Blocks:
                 d.append(PostconditionBlock(block))
         return d
 
-    def rotate_right(self):
-        row = self.blocks[0]
-        self.blocks.rotate(1)
-        return row
-
     def rotate_left(self):
-        row = self.blocks[0]
-        self.blocks.rotate(-1)
+        row = self.blocks.popleft()
         return row
 
     def assert_molings_have_valid_last_character(self):
@@ -285,6 +279,8 @@ class MolingViewer(Frame):
     def show_next_block(self, event):
         try:
             block = self.blocks.rotate_left()
+        except IndexError:
+            messagebox.showinfo('The end.', message='End of file.')
         except AttributeError:
             messagebox.showerror('Not so fast.', message='Load knowledge base first.')
         else:
