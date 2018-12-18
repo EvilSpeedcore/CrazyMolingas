@@ -344,12 +344,10 @@ class MolingViewer(Frame):
             table_entry = Entry(window, text='')
             table_entry.insert(0, header)
             table_entry.grid(row=0, column=i)
-            table_entry['state'] = 'disabled'
             for j, cell_value in enumerate(table[header], start=1):
                 table_entry = Entry(window, text='')
                 table_entry.insert(0, cell_value)
                 table_entry.grid(row=j, column=i)
-                table_entry['state'] = 'disabled'
 
 
 def main():
