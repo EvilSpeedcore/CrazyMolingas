@@ -10,7 +10,7 @@ import subprocess
 from PIL import Image, ImageTk
 from tkinter import (
     Tk, BOTH, Text, Button, END, filedialog, messagebox, NORMAL, DISABLED,
-    Canvas, Checkbutton, IntVar, S, W, E, N, Toplevel, Entry
+    Canvas, Checkbutton, IntVar, S, W, E, N, Toplevel, Entry, simpledialog
 )
 from tkinter.ttk import Frame, Label, Style
 
@@ -26,10 +26,11 @@ class PostconditionHandler:
     def gathered_conditions(self):
         with os.scandir(self.path) as directory:
             for child in directory:
-                dir_path = pathlib.Path(child.path)
-                for postcondition in os.listdir(str(dir_path)):
-                    path = dir_path / postcondition
-                    yield PostCondition(path, path.stem)
+                if child.is_dir():
+                    dir_path = pathlib.Path(child.path)
+                    for postcondition in os.listdir(str(dir_path)):
+                        path = dir_path / postcondition
+                        yield PostCondition(path, path.stem)
 
     def find_condition(self, filename):
         condition = [cond for cond in self.gathered_conditions() if cond.name == filename]
