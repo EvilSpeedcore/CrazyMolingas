@@ -1,6 +1,7 @@
 #  TODO: File should be in UTF-8 without BOM.
 #  TODO: There is should be no blank lines in file.
 import collections
+import csv
 import os
 import pathlib
 import textwrap
@@ -9,7 +10,7 @@ import subprocess
 from PIL import Image, ImageTk
 from tkinter import (
     Tk, BOTH, Text, Button, END, filedialog, messagebox, NORMAL, DISABLED,
-    Canvas, Checkbutton, IntVar, S, W, E, N
+    Canvas, Checkbutton, IntVar, S, W, E, N, Toplevel, Entry
 )
 from tkinter.ttk import Frame, Label, Style
 
@@ -25,8 +26,10 @@ class PostconditionHandler:
     def gathered_conditions(self):
         with os.scandir(self.path) as directory:
             for child in directory:
-                for postcondition in os.listdir(child.path):
-                    yield pathlib.Path(postcondition).resolve()
+                dir_path = pathlib.Path(child.path)
+                for postcondition in os.listdir(str(dir_path)):
+                    path = dir_path / postcondition
+                    yield PostCondition(path, path.stem)
 
     def find_condition(self, filename):
         condition = [cond for cond in self.gathered_conditions() if cond.name == filename]
@@ -176,14 +179,26 @@ class PostconditionBlock:
             return textwrap.indent('\n{}'.format(self.moling.core), '    ')
         return textwrap.indent(self.moling.core, ' ')
 
+    @property
     def image(self):
-        return [pst for pst in self.postconditions if 'рис' in pst][0]
+        return self.is_image()[0]
 
+    @property
     def formula(self):
-        return [pst for pst in self.postconditions if 'форм' in pst][0]
+        return self.is_formula()[0]
 
+    @property
     def table(self):
-        return [pst for pst in self.postconditions if 'табл' in pst][0]
+        return self.is_table()[0]
+
+    def is_image(self):
+        return [pst for pst in self.postconditions if 'рис' in pst]
+
+    def is_formula(self):
+        return [pst for pst in self.postconditions if 'форм' in pst]
+
+    def is_table(self):
+        return [pst for pst in self.postconditions if 'табл' in pst]
 
 
 class TextBlock:
@@ -278,11 +293,11 @@ class MolingViewer(Frame):
             self.displayed_text.see(END)
             self.displayed_text.config(state=DISABLED)
             if isinstance(block, TextBlock):
-                self.canvas.delete("all")
+                self.canvas.delete('all')
             else:
                 if not self.var.get():
-                    if block.image():
-                        pst = self.postcondition_handler.find_condition(block.image())
+                    if block.is_image():
+                        pst = self.postcondition_handler.find_condition(block.image)
                         image = Image.open(pst.path)
                         width, height = image.size
                         if width > 600 or height > 1650:
@@ -290,11 +305,13 @@ class MolingViewer(Frame):
                         image = ImageTk.PhotoImage(image)
                         self.canvas.image = image
                         self.canvas.create_image(0, 0, anchor='nw', image=image)
-                        if block.formula():
-                            pst = self.postcondition_handler.find_condition(block.formula())
+                        if block.is_formula():
+                            pst = self.postcondition_handler.find_condition(block.formula)
                             subprocess.Popen([str(pst.path)])
-                    elif block.table():
+                    elif block.is_table():
                         self.show_table_button['state'] = 'normal'
+                        pst = self.postcondition_handler.find_condition(block.table)
+                        self.show_table_button.configure(text='Show table', command=lambda: self.open_table(pst))
 
     def load_kb(self):
         kb_path = filedialog.askopenfile()
@@ -306,10 +323,38 @@ class MolingViewer(Frame):
         directory = filedialog.askdirectory()
         self.postcondition_handler = PostconditionHandler(directory)
 
+    @staticmethod
+    def _read_table(path):
+        with open(path, newline='', encoding='cp1251') as f:
+            reader = csv.reader(f, delimiter=';')
+            header = list(next(reader))
+            table = collections.defaultdict(list)
+
+            for row in reader:
+                for h, r in ([(h, r) for h, r in zip(header, row)]):
+                    table[h].append(r)
+
+            return table
+
+    def open_table(self, postcondition):
+        window = Toplevel(self)
+        window.title(postcondition.name)
+        table = self._read_table(postcondition.path)
+        for i, header in enumerate(list(table.keys())):
+            table_entry = Entry(window, text='')
+            table_entry.insert(0, header)
+            table_entry.grid(row=0, column=i)
+            table_entry['state'] = 'disabled'
+            for j, cell_value in enumerate(table[header], start=1):
+                table_entry = Entry(window, text='')
+                table_entry.insert(0, cell_value)
+                table_entry.grid(row=j, column=i)
+                table_entry['state'] = 'disabled'
+
 
 def main():
     root = Tk()
-    root.geometry("1650x700")
+    root.geometry('1650x700')
     app = MolingViewer()
     root.mainloop()
 
