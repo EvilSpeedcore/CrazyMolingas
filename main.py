@@ -57,7 +57,11 @@ class Moling:
 
     @property
     def core(self):
-        return self.parts[2]
+        core = self.parts[2]
+        if self.indent == '0':
+            loc = '.'.join([each for each in (self.chapter, self.paragraph, self.subparagraph) if each != '0'])
+            return '\n{} {}\n'.format(loc, core)
+        return core
 
     @property
     def dict_numbers(self):
@@ -75,9 +79,11 @@ class Moling:
     def source(self):
         return self.identifier_codes[0]
 
+    @property
     def chapter(self):
         return self.identifier_codes[1]
 
+    @property
     def paragraph(self):
         return self.identifier_codes[2]
 
@@ -85,14 +91,16 @@ class Moling:
     def subparagraph(self):
         return self.identifier_codes[3]
 
+    @property
     def indent(self):
         return self.identifier_codes[4]
 
+    @property
     def number(self):
         return self.identifier_codes[5]
 
     def is_first(self):
-        return self.number() == '1'
+        return self.number == '1'
 
     def _get_identifier_cores(self):
         ids = self.identifier.split('.')
@@ -152,7 +160,8 @@ class Blocks:
 
     def assert_molings_have_valid_last_character(self):
         for moling in self.molings:
-            if not moling.core.endswith(('.', '...', '!', '?')):
+            if not moling.core.endswith(('.', '...', '!', '?', '\n')):
+                print(moling.core)
                 messagebox.showerror('Error', message='Invalid end of core: {}'.format(moling.core))
 
     def assert_identifier_cores_length(self):
