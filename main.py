@@ -57,7 +57,7 @@ class Moling:
 
     @property
     def core(self):
-        core = self.parts[2]
+        core = self.parts[2].replace('_', ' ')
         if self.indent == '0':
             loc = '.'.join([each for each in (self.chapter, self.paragraph, self.subparagraph) if each != '0'])
             return '\n{} {}\n'.format(loc, core)
@@ -123,6 +123,9 @@ class Blocks:
         self.blocks = self._create_blocks()
         self.assert_molings_have_valid_last_character()
         self.assert_identifier_cores_length()
+
+    def __call__(self, *args, **kwargs):
+        self.blocks = self._create_blocks()
 
     def __iter__(self):
         return iter(self.blocks)
@@ -272,6 +275,7 @@ class MolingViewer(Frame):
 
         self.displayed_text = Text(self, width=109, highlightthickness=1, highlightbackground='black', padx=1)
         self.displayed_text.grid(row=0, column=5, rowspan=6, columnspan=7, sticky=N+W)
+        self.displayed_text.config(state=DISABLED)
 
         load_base_button = Button(self, text='Load base', height=1, width=12, command=self.load_kb)
         load_base_button.grid(row=6, column=11, sticky=W)
@@ -293,7 +297,12 @@ class MolingViewer(Frame):
         try:
             block = self.blocks.rotate_left()
         except IndexError:
-            messagebox.showinfo('The end.', message='End of file.')
+            result = messagebox.askokcancel('How did I get here?', 'Reload?')
+            if result:
+                self.blocks()
+                self.canvas.delete('all')
+                self.displayed_text.config(state=NORMAL)
+                self.displayed_text.delete('1.0', END)
         except AttributeError:
             messagebox.showerror('Not so fast.', message='Load knowledge base first.')
         else:
@@ -317,7 +326,7 @@ class MolingViewer(Frame):
                         if block.is_formula():
                             pst = self.postcondition_handler.find_condition(block.formula)
                             subprocess.Popen([str(pst.path)])
-                    elif block.is_table():
+                    if block.is_table():
                         self.show_table_button['state'] = 'normal'
                         pst = self.postcondition_handler.find_condition(block.table)
                         self.show_table_button.configure(text='Show table', command=lambda: self.open_table(pst))
