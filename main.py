@@ -10,9 +10,9 @@ import subprocess
 from PIL import Image, ImageTk
 from tkinter import (
     Tk, BOTH, Text, Button, END, filedialog, messagebox, NORMAL, DISABLED,
-    Canvas, Checkbutton, IntVar, S, W, E, N, Toplevel, Entry, simpledialog
+    Canvas, Checkbutton, IntVar, W, N, Toplevel, Entry
 )
-from tkinter.ttk import Frame, Label, Style
+from tkinter.ttk import Frame, Style
 
 
 PostCondition = collections.namedtuple('PostConditionImage', ['path', 'name'])
@@ -164,7 +164,6 @@ class Blocks:
     def assert_molings_have_valid_last_character(self):
         for moling in self.molings:
             if not moling.core.endswith(('.', '...', '!', '?', '\n')):
-                print(moling.core)
                 messagebox.showerror('Error', message='Invalid end of core: {}'.format(moling.core))
 
     def assert_identifier_cores_length(self):
@@ -254,7 +253,7 @@ class TextBlock:
 
 def load_knowledge_base(filepath):
     with open(filepath, 'r', encoding='utf-8') as f:
-        lines = [line.strip() for line in f.readlines() if line]
+        lines = [line.strip() for line in f.readlines() if not len(line.split()) == 0]
     return lines
 
 
