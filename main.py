@@ -1,5 +1,3 @@
-#  TODO: File should be in UTF-8 without BOM.
-#  TODO: There is should be no blank lines in file.
 import collections
 import csv
 import os
@@ -9,11 +7,12 @@ import subprocess
 
 from PIL import Image, ImageTk
 from tkinter import (
-    Tk, BOTH, Text, Button, END, filedialog, messagebox, NORMAL, DISABLED,
-    Canvas, Checkbutton, IntVar, W, N, Toplevel, Entry
+    Tk, Text, Button, filedialog, messagebox, Message, StringVar, Label, Frame,
+    Canvas, Checkbutton, IntVar, Toplevel, W, CENTER, END, BOTH, N, DISABLED, NORMAL, E, S, X
 )
 from tkinter.ttk import Frame, Style
 
+from table import Table
 
 PostCondition = collections.namedtuple('PostConditionImage', ['path', 'name'])
 
@@ -311,6 +310,7 @@ class MolingViewer(Frame):
             self.displayed_text.config(state=DISABLED)
             if isinstance(block, TextBlock):
                 self.canvas.delete('all')
+                self.show_table_button['state'] = 'disabled'
             else:
                 if not self.var.get():
                     if block.is_image():
@@ -350,21 +350,15 @@ class MolingViewer(Frame):
             for row in reader:
                 for h, r in ([(h, r) for h, r in zip(header, row)]):
                     table[h].append(r)
-
             return table
 
     def open_table(self, postcondition):
         window = Toplevel(self)
         window.title(postcondition.name)
-        table = self._read_table(postcondition.path)
-        for i, header in enumerate(list(table.keys())):
-            table_entry = Entry(window, text='')
-            table_entry.insert(0, header)
-            table_entry.grid(row=0, column=i)
-            for j, cell_value in enumerate(table[header], start=1):
-                table_entry = Entry(window, text='')
-                table_entry.insert(0, cell_value)
-                table_entry.grid(row=j, column=i)
+        data = self._read_table(postcondition.path)
+        table = Table(window, list(data.keys()), column_minwidths=[None for _ in data.keys()])
+        table.pack(expand=True, fill=X, padx=10, pady=10)
+        table.set_data(list(zip(*[data[header] for header in data.keys()])))
 
 
 def main():
