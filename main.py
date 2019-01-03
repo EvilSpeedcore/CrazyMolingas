@@ -2,13 +2,14 @@ import collections
 import csv
 import os
 import pathlib
-import textwrap
+import re
 import subprocess
+import textwrap
 
 from PIL import Image, ImageTk
 from tkinter import (
-    Tk, Text, Button, filedialog, messagebox, Message, StringVar, Label, Frame,
-    Canvas, Checkbutton, IntVar, Toplevel, W, CENTER, END, BOTH, N, DISABLED, NORMAL, E, S, X
+    Tk, Text, Button, filedialog, messagebox,
+    Canvas, Checkbutton, IntVar, Toplevel, W, END, BOTH, N, DISABLED, NORMAL, X
 )
 from tkinter.ttk import Frame, Style
 
@@ -48,7 +49,7 @@ class Moling:
 
     @property
     def identifier(self):
-        return self.parts[0]
+        return re.search(r'(\d+.){5}(\d+)', self.parts[0]).group()
 
     @property
     def condition(self):
@@ -56,6 +57,7 @@ class Moling:
 
     @property
     def core(self):
+        #  TODO: Move this logic to Blocks classes?
         core = self.parts[2].replace('_', ' ')
         if self.indent == '0':
             loc = '.'.join([each for each in (self.chapter, self.paragraph, self.subparagraph) if each != '0'])
@@ -130,31 +132,24 @@ class Blocks:
         return iter(self.blocks)
 
     def _create_blocks(self):
-        blocks, text_molings = [], []
+        blocks = collections.deque()
+        text_molings = list()
         for moling in self.molings:
             if moling.postcondition:
                 if text_molings:
-                    blocks.append(text_molings)
+                    blocks.append(TextBlock(text_molings))
                     text_molings = []
-                duplicate = [e for e in blocks if not isinstance(e, list)
-                             and e.identifier == moling.identifier]
+                duplicate = [block for block in blocks if isinstance(block, PostconditionBlock)
+                             and block.moling.core == moling.core]
                 if duplicate:
-                    duplicate[0].postconditions.append(moling.postcondition)
+                    duplicate[0].moling.postconditions.append(moling.postcondition)
                 else:
-                    blocks.append(moling)
+                    blocks.append(PostconditionBlock(moling))
             else:
                 text_molings.append(moling)
-        blocks.append(text_molings)
-        if not blocks:
-            blocks.append(text_molings)
-
-        d = collections.deque()
-        for block in blocks:
-            if isinstance(block, list):
-                d.append(TextBlock(block))
-            else:
-                d.append(PostconditionBlock(block))
-        return d
+        if text_molings:
+            blocks.append(TextBlock(text_molings))
+        return blocks
 
     def rotate_left(self):
         row = self.blocks.popleft()
@@ -162,7 +157,7 @@ class Blocks:
 
     def assert_molings_have_valid_last_character(self):
         for moling in self.molings:
-            if not moling.core.endswith(('.', '...', '!', '?', '\n')):
+            if not moling.core.endswith((':', '.', '...', '!', '?', '\n')):
                 messagebox.showerror('Error', message='Invalid end of core: {}'.format(moling.core))
 
     def assert_identifier_cores_length(self):
